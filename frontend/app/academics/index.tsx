@@ -82,8 +82,13 @@ export default function AcademicsScreen() {
                   <Text style={s.name}>{st.name}</Text>
                   <Text style={s.sub}>Section {sectionName(db, st.sectionId)} · Roll {st.rollNo}</Text>
                 </View>
-                <Text style={[s.avg, { color: colors.brandPrimary }]}>{p.average}%</Text>
-                <Badge label={p.grade} tone={p.average >= 75 ? "success" : p.average >= 50 ? "warning" : "error"} />
+                <Text style={[s.avg, { color: p.total === 0 ? colors.muted : colors.brandPrimary }]}>
+                  {p.total === 0 ? "—" : `${p.average}%`}
+                </Text>
+                <Badge
+                  label={p.total === 0 ? "—" : p.grade}
+                  tone={p.total === 0 ? "neutral" : p.average >= 75 ? "success" : p.average >= 50 ? "warning" : "error"}
+                />
                 <CaretRight size={16} color={colors.muted} weight="bold" />
               </Pressable>
             </View>

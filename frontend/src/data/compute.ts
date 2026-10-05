@@ -12,6 +12,7 @@ export interface AttendanceStat {
   present: number;
   absent: number;
   late: number;
+  unmarked: number;
   total: number;
   percentage: number; // present+late counted as attended
 }
@@ -22,7 +23,7 @@ function pct(attended: number, total: number): number {
 }
 
 export function emptyStat(): AttendanceStat {
-  return { present: 0, absent: 0, late: 0, total: 0, percentage: 0 };
+  return { present: 0, absent: 0, late: 0, unmarked: 0, total: 0, percentage: 0 };
 }
 
 function tally(statuses: AttendanceStatus[]): AttendanceStat {
@@ -30,6 +31,18 @@ function tally(statuses: AttendanceStatus[]): AttendanceStat {
   for (const st of statuses) {
     s[st] += 1;
     s.total += 1;
+  }
+  s.percentage = pct(s.present + s.late, s.total);
+  return s;
+}
+
+// Date rolls include every active student. A missing row is unmarked, not present.
+function tallyRoster(marks: (AttendanceStatus | null)[]): AttendanceStat {
+  const s = emptyStat();
+  for (const mark of marks) {
+    s.total += 1;
+    if (mark == null) s.unmarked += 1;
+    else s[mark] += 1;
   }
   s.percentage = pct(s.present + s.late, s.total);
   return s;
@@ -67,10 +80,10 @@ export function statusFor(
   db: Database,
   date: string,
   studentId: string,
-): AttendanceStatus {
+): AttendanceStatus | null {
   return (
-    db.attendance.find((a) => a.date === date && a.studentId === studentId)
-      ?.status ?? "present"
+    db.attendance.find((a) => a.date === date && a.studentId === studentId)?.status ??
+    null
   );
 }
 
@@ -87,15 +100,13 @@ export function sectionAttendanceForDate(
   date: string,
 ): AttendanceStat {
   const ids = sectionStudents(db, sectionId).map((s) => s.id);
-  const statuses = ids.map((id) => statusFor(db, date, id));
-  return tally(statuses);
+  return tallyRoster(ids.map((id) => statusFor(db, date, id)));
 }
 
 export function todayAttendance(db: Database): AttendanceStat {
   const date = todayKey();
   const ids = activeStudents(db).map((s) => s.id);
-  const statuses = ids.map((id) => statusFor(db, date, id));
-  return tally(statuses);
+  return tallyRoster(ids.map((id) => statusFor(db, date, id)));
 }
 
 // ---- Fees ----------------------------------------------------------------
@@ -221,14 +232,18 @@ export function studentPerformance(db: Database, studentId: string): Performance
 }
 
 export function subjectClassAverage(db: Database, subjectId: string): number {
-  const rows = db.results.filter((r) => r.subjectId === subjectId);
+  const activeIds = new Set(activeStudents(db).map((s) => s.id));
+  const rows = db.results.filter((r) => r.subjectId === subjectId && activeIds.has(r.studentId));
   if (rows.length === 0) return 0;
   const sum = rows.reduce((s, r) => s + (r.marks / r.maxMarks) * 100, 0);
   return Math.round((sum / rows.length) * 10) / 10;
 }
 
 export function schoolPerformanceAverage(db: Database): number {
-  const all = activeStudents(db).map((s) => studentPerformance(db, s.id).average);
+  const all = activeStudents(db)
+    .map((s) => studentPerformance(db, s.id))
+    .filter((p) => p.total > 0)
+    .map((p) => p.average);
   if (all.length === 0) return 0;
   return Math.round((all.reduce((a, b) => a + b, 0) / all.length) * 10) / 10;
 }

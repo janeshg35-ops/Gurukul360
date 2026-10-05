@@ -11,7 +11,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { StackHeader } from "@/src/components/screen-header";
 import { useData } from "@/src/data/store";
-import { feeTotals, todayAttendance } from "@/src/data/compute";
+import { activeStudents, feeTotals, todayAttendance } from "@/src/data/compute";
 import { makeStyles, spacing, useTheme } from "@/src/theme";
 
 type Icon = React.ComponentType<IconProps>;
@@ -55,7 +55,7 @@ export default function ReportsHub() {
     bg: string;
     stat: string;
   }[] = [
-    { type: "student", title: "Student Report", desc: "Enrolment directory across classes", icon: UsersThree, color: colors.brandPrimary, bg: colors.brandTertiary, stat: `${db.students.length}` },
+    { type: "student", title: "Student Report", desc: "Enrolment directory across classes", icon: UsersThree, color: colors.brandPrimary, bg: colors.brandTertiary, stat: `${activeStudents(db).length}` },
     { type: "attendance", title: "Attendance Report", desc: "Student-wise attendance summary", icon: ChartBar, color: colors.success, bg: colors.successSoft, stat: `${att.percentage}%` },
     { type: "fee-collection", title: "Fee Collection Report", desc: "Collected fees and payment status", icon: CurrencyInr, color: colors.success, bg: colors.successSoft, stat: "" },
     { type: "outstanding", title: "Outstanding Fee Report", desc: "Pending dues and follow-ups", icon: Warning, color: colors.error, bg: colors.errorSoft, stat: `${fees.studentsWithDues}` },

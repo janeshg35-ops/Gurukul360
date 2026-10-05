@@ -24,7 +24,9 @@ const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surfaceSecondary },
   summary: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-around",
+    rowGap: spacing.sm,
     backgroundColor: c.surface,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
@@ -79,9 +81,12 @@ export default function AttendanceEditor() {
   const students = sectionStudents(db, sectionId);
   const section = db.sections.find((x) => x.id === sectionId);
 
-  const [draft, setDraft] = useState<Record<string, AttendanceStatus>>(() => {
-    const init: Record<string, AttendanceStatus> = {};
-    for (const st of students) init[st.id] = statusFor(db, date, st.id);
+  const [draft, setDraft] = useState<Partial<Record<string, AttendanceStatus>>>(() => {
+    const init: Partial<Record<string, AttendanceStatus>> = {};
+    for (const st of students) {
+      const status = statusFor(db, date, st.id);
+      if (status) init[st.id] = status;
+    }
     return init;
   });
 
@@ -92,15 +97,29 @@ export default function AttendanceEditor() {
   };
 
   const counts = useMemo(() => {
-    const c = { present: 0, late: 0, absent: 0 };
-    Object.values(draft).forEach((v) => (c[v] += 1));
+    const c = { present: 0, late: 0, absent: 0, unmarked: 0 };
+    for (const st of students) {
+      const status = draft[st.id];
+      if (status) c[status] += 1;
+      else c.unmarked += 1;
+    }
     return c;
-  }, [draft]);
+  }, [draft, students]);
   const total = students.length;
+  const marked = counts.present + counts.late + counts.absent;
   const pct = total > 0 ? Math.round(((counts.present + counts.late) / total) * 1000) / 10 : 0;
 
   const onSave = () => {
-    setAttendance(date, draft);
+    const updates: Record<string, AttendanceStatus> = {};
+    for (const st of students) {
+      const status = draft[st.id];
+      if (status) updates[st.id] = status;
+    }
+    if (Object.keys(updates).length === 0) {
+      toast.show("Mark at least one student before saving", "info");
+      return;
+    }
+    setAttendance(date, updates);
     toast.show("Attendance saved successfully", "success");
     router.back();
   };
@@ -113,7 +132,7 @@ export default function AttendanceEditor() {
       />
       <View style={s.summary}>
         <View style={s.summaryBlock}>
-          <Text style={[s.summaryVal, { color: colors.brandPrimary }]} testID="editor-pct">{pct}%</Text>
+          <Text style={[s.summaryVal, { color: colors.brandPrimary }]} testID="editor-pct">{marked === 0 ? "—" : `${pct}%`}</Text>
           <Text style={s.summaryLabel}>Attendance</Text>
         </View>
         <View style={s.summaryBlock}>
@@ -127,6 +146,10 @@ export default function AttendanceEditor() {
         <View style={s.summaryBlock}>
           <Text style={[s.summaryVal, { color: colors.error }]}>{counts.absent}</Text>
           <Text style={s.summaryLabel}>Absent</Text>
+        </View>
+        <View style={s.summaryBlock}>
+          <Text style={[s.summaryVal, { color: colors.muted }]}>{counts.unmarked}</Text>
+          <Text style={s.summaryLabel}>Not recorded</Text>
         </View>
       </View>
 

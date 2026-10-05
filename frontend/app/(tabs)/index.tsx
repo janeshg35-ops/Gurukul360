@@ -74,6 +74,7 @@ export default function DashboardScreen() {
 
   const students = activeStudents(db);
   const att = todayAttendance(db);
+  const recordedToday = att.present + att.late + att.absent;
   const fees = feeTotals(db);
   const perf = schoolPerformanceAverage(db);
   const payments = recentPayments(db, 4);
@@ -128,9 +129,9 @@ export default function DashboardScreen() {
               icon={CalendarCheck}
               iconColor={colors.success}
               iconBg={colors.successSoft}
-              value={`${att.percentage}%`}
+              value={recordedToday === 0 ? "—" : `${att.percentage}%`}
               label="Today's Attendance"
-              sub={`${att.present + att.late}/${att.total} present`}
+              sub={recordedToday === 0 ? `${att.unmarked} not recorded` : `${att.present + att.late}/${att.total} present`}
               subColor={colors.muted}
               onPress={() => router.push("/(tabs)/attendance")}
               testID="kpi-attendance"
@@ -178,14 +179,18 @@ export default function DashboardScreen() {
                 { value: att.present, color: colors.success },
                 { value: att.late, color: colors.warning },
                 { value: att.absent, color: colors.error },
+                ...(att.unmarked > 0 ? [{ value: att.unmarked, color: colors.muted }] : []),
               ]}
-              centerTop={`${att.percentage}%`}
+              centerTop={att.present + att.late + att.absent === 0 ? "—" : `${att.percentage}%`}
               centerBottom="Present"
             />
             <View style={s.legendCol}>
               <LegendRow color={colors.success} label="Present" value={String(att.present)} />
               <LegendRow color={colors.warning} label="Late" value={String(att.late)} />
               <LegendRow color={colors.error} label="Absent" value={String(att.absent)} />
+              {att.unmarked > 0 ? (
+                <LegendRow color={colors.muted} label="Not recorded" value={String(att.unmarked)} />
+              ) : null}
             </View>
           </View>
         </Card>

@@ -43,7 +43,7 @@ const useStyles = makeStyles((c) => ({
   },
   todayChipText: { fontSize: 12, fontWeight: "700", color: c.brandPrimary },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing["3xl"] },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.sm },
+  summaryRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: spacing.sm, rowGap: spacing.sm },
   summaryBlock: { alignItems: "center", gap: 2 },
   summaryVal: { fontSize: 20, fontWeight: "800" },
   summaryLabel: { fontSize: 12, color: c.muted, fontWeight: "600" },
@@ -79,11 +79,13 @@ export default function AttendanceScreen() {
       acc.present += cur.stat.present;
       acc.absent += cur.stat.absent;
       acc.late += cur.stat.late;
+      acc.unmarked += cur.stat.unmarked;
       acc.total += cur.stat.total;
       return acc;
     },
-    { present: 0, absent: 0, late: 0, total: 0 },
+    { present: 0, absent: 0, late: 0, unmarked: 0, total: 0 },
   );
+  const recorded = overall.present + overall.late + overall.absent;
   const overallPct = overall.total > 0 ? Math.round(((overall.present + overall.late) / overall.total) * 1000) / 10 : 0;
 
   const shiftDay = (delta: number) => {
@@ -128,7 +130,7 @@ export default function AttendanceScreen() {
           <Text style={s.summaryTitle}>School Summary</Text>
           <View style={s.summaryRow}>
             <View style={s.summaryBlock}>
-              <Text style={[s.summaryVal, { color: colors.brandPrimary }]}>{overallPct}%</Text>
+              <Text style={[s.summaryVal, { color: colors.brandPrimary }]}>{recorded === 0 ? "—" : `${overallPct}%`}</Text>
               <Text style={s.summaryLabel}>Attendance</Text>
             </View>
             <View style={s.summaryBlock}>
@@ -143,12 +145,26 @@ export default function AttendanceScreen() {
               <Text style={[s.summaryVal, { color: colors.error }]}>{overall.absent}</Text>
               <Text style={s.summaryLabel}>Absent</Text>
             </View>
+            {overall.unmarked > 0 ? (
+              <View style={s.summaryBlock}>
+                <Text style={[s.summaryVal, { color: colors.muted }]}>{overall.unmarked}</Text>
+                <Text style={s.summaryLabel}>Not recorded</Text>
+              </View>
+            ) : null}
           </View>
         </Card>
 
         <Text style={s.sectionTitle}>Classes & Sections</Text>
         {summaries.map((sm) => {
-          const tone = sm.stat.percentage >= 85 ? "success" : sm.stat.percentage >= 75 ? "warning" : "error";
+          const sectionRecorded = sm.stat.present + sm.stat.late + sm.stat.absent;
+          const tone =
+            sectionRecorded === 0
+              ? "neutral"
+              : sm.stat.percentage >= 85
+                ? "success"
+                : sm.stat.percentage >= 75
+                  ? "warning"
+                  : "error";
           return (
             <Pressable
               key={sm.section.id}
@@ -167,9 +183,10 @@ export default function AttendanceScreen() {
                 </Text>
                 <Text style={s.secSub}>
                   {sm.totalStudents} students · {sm.stat.present} present · {sm.stat.absent} absent
+                  {sm.stat.unmarked > 0 ? ` · ${sm.stat.unmarked} not recorded` : ""}
                 </Text>
               </View>
-              <Badge label={`${sm.stat.percentage}%`} tone={tone} />
+              <Badge label={sectionRecorded === 0 ? "Not recorded" : `${sm.stat.percentage}%`} tone={tone} />
               <CaretRight size={16} color={colors.muted} weight="bold" />
             </Pressable>
           );

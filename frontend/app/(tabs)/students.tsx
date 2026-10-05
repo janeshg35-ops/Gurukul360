@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { CaretRight, UsersThree } from "phosphor-react-native";
+import { CaretRight, Plus, UsersThree } from "phosphor-react-native";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 
@@ -43,6 +43,16 @@ const useStyles = makeStyles((c) => ({
   name: { fontSize: 15, fontWeight: "700", color: c.onSurface },
   sub: { fontSize: 13, color: c.muted },
   count: { fontSize: 12, color: "#9CA3AF", paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    paddingHorizontal: spacing.md,
+    height: 36,
+    borderRadius: 18,
+  },
+  addText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
 }));
 
 export default function StudentsScreen() {
@@ -83,7 +93,22 @@ export default function StudentsScreen() {
 
   return (
     <View style={s.root}>
-      <BrandHeader title="Manage Students" subtitle={`${activeStudents(db).length} enrolled students`} />
+      <BrandHeader
+        title="Manage Students"
+        subtitle={`${activeStudents(db).length} enrolled students`}
+        right={
+          <Pressable
+            style={s.addBtn}
+            onPress={() => router.push({ pathname: "/student/form" })}
+            testID="add-student-button"
+            accessibilityRole="button"
+            accessibilityLabel="Add Student"
+          >
+            <Plus size={16} color="#FFFFFF" weight="bold" />
+            <Text style={s.addText}>Add</Text>
+          </Pressable>
+        }
+      />
       <View style={s.controls}>
         <View style={s.searchWrap}>
           <SearchBar
@@ -123,7 +148,14 @@ export default function StudentsScreen() {
         }
         renderItem={({ item }) => {
           const attn = studentAttendance(db, item.id);
-          const tone = attn.percentage >= 85 ? "success" : attn.percentage >= 75 ? "warning" : "error";
+          const hasAttendance = attn.total > 0;
+          const tone = !hasAttendance
+            ? "neutral"
+            : attn.percentage >= 85
+              ? "success"
+              : attn.percentage >= 75
+                ? "warning"
+                : "error";
           return (
             <Pressable
               style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
@@ -137,7 +169,7 @@ export default function StudentsScreen() {
                   {item.admissionNo} · {className(db, item.classId)} — {sectionName(db, item.sectionId)}
                 </Text>
               </View>
-              <Badge label={`${attn.percentage}%`} tone={tone} />
+              <Badge label={hasAttendance ? `${attn.percentage}%` : "—"} tone={tone} />
               <CaretRight size={16} color={colors.muted} weight="bold" />
             </Pressable>
           );

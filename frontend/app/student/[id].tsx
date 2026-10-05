@@ -2,13 +2,13 @@ import dayjs from "dayjs";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Receipt } from "phosphor-react-native";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 
 import { DonutChart, LegendRow } from "@/src/components/charts";
 import { StackHeader } from "@/src/components/screen-header";
-import { PrimaryButton, SegmentedTabs } from "@/src/components/ui/controls";
+import { PrimaryButton, SecondaryButton, SegmentedTabs } from "@/src/components/ui/controls";
 import { Avatar, Badge, Card, Divider, StatBar, Tone } from "@/src/components/ui/primitives";
-import { EmptyState } from "@/src/components/ui/feedback";
+import { EmptyState, useToast } from "@/src/components/ui/feedback";
 import { useData } from "@/src/data/store";
 import {
   className,
@@ -35,6 +35,7 @@ const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surfaceSecondary },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing["3xl"] },
   profileHead: { alignItems: "center", gap: spacing.sm },
+  actions: { alignSelf: "stretch", gap: spacing.sm, marginTop: spacing.sm },
   name: { fontSize: 20, fontWeight: "800", color: c.onSurface, marginTop: spacing.sm },
   classLabel: { fontSize: 14, color: c.muted, fontWeight: "600" },
   miniRow: { flexDirection: "row", gap: spacing.md },
@@ -77,7 +78,8 @@ export default function StudentProfile() {
   const s = useStyles();
   const { colors } = useTheme();
   const router = useRouter();
-  const { db } = useData();
+  const { db, deactivateStudent } = useData();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tab, setTab] = useState("overview");
 
@@ -115,18 +117,51 @@ export default function StudentProfile() {
             {className(db, student.classId)} — {sectionName(db, student.sectionId)} · Roll {student.rollNo}
           </Text>
           <Badge label={student.status === "active" ? "Active" : "Inactive"} tone={student.status === "active" ? "success" : "neutral"} />
+          {student.status === "active" ? (
+            <View style={s.actions}>
+              <PrimaryButton
+                label="Edit Student"
+                onPress={() => router.push({ pathname: "/student/form", params: { id: student.id } })}
+                testID="edit-student-button"
+              />
+              <SecondaryButton
+                label="Deactivate Student"
+                onPress={() =>
+                  Alert.alert(
+                    "Deactivate Student",
+                    `${student.name} will be removed from active school operations, including attendance rolls, fees, academics, reports, and dashboard statistics. Attendance history, fee payments, and academic results will be preserved.`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Deactivate Student",
+                        style: "destructive",
+                        onPress: () => {
+                          deactivateStudent(student.id);
+                          toast.show("Student deactivated", "info");
+                          router.back();
+                        },
+                      },
+                    ],
+                  )
+                }
+                testID="deactivate-student-button"
+              />
+            </View>
+          ) : null}
         </View>
 
         <View style={s.miniRow}>
           <View style={s.mini}>
-            <Text style={[s.miniVal, { color: colors.success }]}>{attn.percentage}%</Text>
+            <Text style={[s.miniVal, { color: attn.total === 0 ? colors.muted : colors.success }]}>
+              {attn.total === 0 ? "—" : `${attn.percentage}%`}
+            </Text>
             <Text style={s.miniLabel}>Attendance</Text>
           </View>
           <View style={s.mini}>
-            <Text style={[s.miniVal, { color: fee.outstanding > 0 ? colors.error : colors.success }]}>
-              {perf.average}%
+            <Text style={[s.miniVal, { color: perf.total === 0 ? colors.muted : fee.outstanding > 0 ? colors.error : colors.success }]}>
+              {perf.total === 0 ? "—" : `${perf.average}%`}
             </Text>
-            <Text style={s.miniLabel}>Avg · {perf.grade}</Text>
+            <Text style={s.miniLabel}>{perf.total === 0 ? "No marks" : `Avg · ${perf.grade}`}</Text>
           </View>
           <View style={s.mini}>
             <Text style={[s.miniVal, { color: fee.outstanding > 0 ? colors.error : colors.success }]}>
@@ -161,11 +196,11 @@ export default function StudentProfile() {
               <Divider />
               <DetailRow label="Relation" value={guardian?.relation ?? "—"} />
               <Divider />
-              <DetailRow label="Occupation" value={guardian?.occupation ?? "—"} />
+              <DetailRow label="Occupation" value={guardian?.occupation || "—"} />
               <Divider />
-              <DetailRow label="Phone" value={guardian?.phone ?? "—"} />
+              <DetailRow label="Phone" value={guardian?.phone || "—"} />
               <Divider />
-              <DetailRow label="Email" value={guardian?.email ?? "—"} />
+              <DetailRow label="Email" value={guardian?.email || "—"} />
             </Card>
 
             <Card>
@@ -180,6 +215,12 @@ export default function StudentProfile() {
         ) : null}
 
         {tab === "attendance" ? (
+          attn.total === 0 ? (
+            <Card>
+              <Text style={s.cardTitle}>Attendance Summary</Text>
+              <Text style={s.paySub}>No attendance has been recorded for this student yet.</Text>
+            </Card>
+          ) : (
           <>
             <Card>
               <Text style={s.cardTitle}>Attendance Summary</Text>
@@ -214,6 +255,7 @@ export default function StudentProfile() {
               ))}
             </Card>
           </>
+          )
         ) : null}
 
         {tab === "fees" ? (
@@ -265,6 +307,12 @@ export default function StudentProfile() {
         ) : null}
 
         {tab === "academics" ? (
+          results.length === 0 ? (
+            <Card>
+              <Text style={s.cardTitle}>Academic Performance — Term 1</Text>
+              <Text style={s.paySub}>No academic results have been recorded for this student yet.</Text>
+            </Card>
+          ) : (
           <Card>
             <Text style={s.cardTitle}>Academic Performance — Term 1</Text>
             <View style={s.miniRow}>
@@ -302,6 +350,7 @@ export default function StudentProfile() {
               </View>
             ))}
           </Card>
+          )
         ) : null}
       </ScrollView>
     </View>

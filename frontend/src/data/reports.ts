@@ -69,9 +69,10 @@ export function buildReport(
 
   if (type === "attendance") {
     const stats = students.map((s) => ({ s, a: studentAttendance(db, s.id) }));
+    const recorded = stats.filter((x) => x.a.total > 0);
     const avg =
-      stats.length > 0
-        ? Math.round((stats.reduce((sum, x) => sum + x.a.percentage, 0) / stats.length) * 10) / 10
+      recorded.length > 0
+        ? Math.round((recorded.reduce((sum, x) => sum + x.a.percentage, 0) / recorded.length) * 10) / 10
         : 0;
     return {
       title: REPORT_TITLES.attendance,
@@ -79,7 +80,7 @@ export function buildReport(
       summary: [
         { label: "Students", value: String(students.length) },
         { label: "Avg Attendance", value: `${avg}%` },
-        { label: "Below 75%", value: String(stats.filter((x) => x.a.percentage < 75).length) },
+        { label: "Below 75%", value: String(recorded.filter((x) => x.a.percentage < 75).length) },
       ],
       columns: ["Name", "Class", "Present", "Late", "Absent", "%"],
       widths: [150, 90, 80, 70, 80, 70],
@@ -89,7 +90,7 @@ export function buildReport(
         String(a.present),
         String(a.late),
         String(a.absent),
-        `${a.percentage}%`,
+        a.total > 0 ? `${a.percentage}%` : "—",
       ]),
     };
   }
@@ -147,23 +148,27 @@ export function buildReport(
   const rows = students
     .map((s) => ({ s, p: studentPerformance(db, s.id) }))
     .sort((a, b) => b.p.average - a.p.average);
+  const recorded = rows.filter((r) => r.p.total > 0);
   const schoolAvg =
-    rows.length > 0 ? Math.round((rows.reduce((sum, r) => sum + r.p.average, 0) / rows.length) * 10) / 10 : 0;
+    recorded.length > 0
+      ? Math.round((recorded.reduce((sum, r) => sum + r.p.average, 0) / recorded.length) * 10) / 10
+      : 0;
+  const top = recorded[0];
   return {
     title: REPORT_TITLES.performance,
     hasFilter: true,
     summary: [
       { label: "Students", value: String(students.length) },
       { label: "School Average", value: `${schoolAvg}%` },
-      { label: "Top Score", value: rows.length ? `${rows[0].p.average}%` : "—" },
+      { label: "Top Score", value: top ? `${top.p.average}%` : "—" },
     ],
     columns: ["Name", "Class", "Average", "Grade"],
     widths: [160, 100, 100, 90],
     rows: rows.map(({ s, p }) => [
       s.name,
       `${className(db, s.classId)}-${sectionName(db, s.sectionId)}`,
-      `${p.average}%`,
-      p.grade,
+      p.total > 0 ? `${p.average}%` : "—",
+      p.total > 0 ? p.grade : "—",
     ]),
   };
 }
