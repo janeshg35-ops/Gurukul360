@@ -10,6 +10,13 @@ import React, {
 
 import { storage } from "@/src/utils/storage";
 import { buildDatabase, DB_VERSION } from "./seed";
+import {
+  insertTeacher,
+  markTeacherActive,
+  markTeacherInactive,
+  patchTeacher,
+  TeacherFormInput,
+} from "./teachers";
 import { AttendanceStatus, Database, FeePayment, Gender, Guardian, Student } from "./types";
 
 const DB_KEY = "gurukul360.db.v1";
@@ -49,6 +56,11 @@ interface DataContextValue {
   addStudent: (input: StudentFormInput) => string | null;
   updateStudent: (id: string, input: StudentFormInput) => boolean;
   deactivateStudent: (id: string) => void;
+  // Teachers
+  addTeacher: (input: TeacherFormInput) => string | null;
+  updateTeacher: (id: string, input: TeacherFormInput) => boolean;
+  deactivateTeacher: (id: string) => void;
+  activateTeacher: (id: string) => "ok" | "conflict" | "missing";
   // Demo reset
   resetDemo: () => void;
 }
@@ -243,13 +255,50 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const addTeacher = useCallback((input: TeacherFormInput): string | null => {
+    const id = uniqueKey("t");
+    if (!insertTeacher(db, input, id)) return null;
+    setDb((prev) => insertTeacher(prev, input, id) ?? prev);
+    return id;
+  }, [db]);
+
+  const updateTeacher = useCallback((id: string, input: TeacherFormInput): boolean => {
+    if (!patchTeacher(db, id, input)) return false;
+    setDb((prev) => patchTeacher(prev, id, input) ?? prev);
+    return true;
+  }, [db]);
+
+  const deactivateTeacher = useCallback((id: string) => {
+    setDb((prev) => markTeacherInactive(prev, id));
+  }, []);
+
+  const activateTeacher = useCallback((id: string): "ok" | "conflict" | "missing" => {
+    const result = markTeacherActive(db, id);
+    if (result === "conflict" || result === "missing") return result;
+    setDb(result);
+    return "ok";
+  }, [db]);
+
   const resetDemo = useCallback(() => {
     setDb(buildDatabase());
   }, []);
 
   return (
     <DataContext.Provider
-      value={{ db, ready, setAttendance, recordPayment, addStudent, updateStudent, deactivateStudent, resetDemo }}
+      value={{
+        db,
+        ready,
+        setAttendance,
+        recordPayment,
+        addStudent,
+        updateStudent,
+        deactivateStudent,
+        addTeacher,
+        updateTeacher,
+        deactivateTeacher,
+        activateTeacher,
+        resetDemo,
+      }}
     >
       {children}
     </DataContext.Provider>

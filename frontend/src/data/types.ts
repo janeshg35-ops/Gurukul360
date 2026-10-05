@@ -41,6 +41,8 @@ export interface Teacher {
   classTeacherOf?: string; // sectionId
   phone: string;
   email: string;
+  // Missing on seeded/saved records means active.
+  status?: "active" | "inactive";
 }
 
 export interface Guardian {

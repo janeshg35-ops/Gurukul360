@@ -24,6 +24,7 @@ import { useToast } from "@/src/components/ui/feedback";
 import { SCHOOL } from "@/src/constants/branding";
 import { useAuth } from "@/src/context/auth";
 import { useData } from "@/src/data/store";
+import { activeTeacherCount } from "@/src/data/teachers";
 import {
   activeStudents,
   feeTotals,
@@ -119,8 +120,9 @@ export default function DashboardScreen() {
               icon={ChalkboardTeacher}
               iconColor={colors.info}
               iconBg={colors.infoSoft}
-              value={String(db.teachers.length)}
+              value={String(activeTeacherCount(db))}
               label="Total Teachers"
+              onPress={() => router.push("/teachers")}
               testID="kpi-teachers"
             />
           </View>
