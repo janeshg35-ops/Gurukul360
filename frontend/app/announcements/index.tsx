@@ -1,13 +1,15 @@
 import dayjs from "dayjs";
+import { useRouter } from "expo-router";
 import {
   CalendarBlank,
   Megaphone,
   Newspaper,
   Note,
+  Plus,
 } from "phosphor-react-native";
 import type { IconProps } from "phosphor-react-native";
 import { useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { StackHeader } from "@/src/components/screen-header";
 import { FilterChips } from "@/src/components/ui/controls";
@@ -36,11 +38,22 @@ const useStyles = makeStyles((c) => ({
   body: { fontSize: 14, color: c.onSurfaceSecondary, lineHeight: 20 },
   footer: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.md },
   footerText: { fontSize: 12, color: c.muted },
+  add: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: c.brandPrimary,
+    paddingHorizontal: spacing.md,
+    height: 34,
+    borderRadius: 17,
+  },
+  addText: { color: c.onBrandPrimary, fontSize: 13, fontWeight: "700" },
 }));
 
 export default function AnnouncementsScreen() {
   const s = useStyles();
   const { colors } = useTheme();
+  const router = useRouter();
   const { db } = useData();
   const [filter, setFilter] = useState<string>("all");
 
@@ -67,7 +80,16 @@ export default function AnnouncementsScreen() {
 
   return (
     <View style={s.root}>
-      <StackHeader title="Communication" subtitle="Notices, events & circulars" />
+      <StackHeader
+        title="Communication"
+        subtitle="Notices, events & circulars"
+        right={
+          <Pressable style={s.add} onPress={() => router.push("/announcements/form")} testID="communication-add">
+            <Plus size={14} color="#FFFFFF" weight="bold" />
+            <Text style={s.addText}>Add</Text>
+          </Pressable>
+        }
+      />
       <View style={s.filters}>
         <FilterChips options={options} selected={filter} onSelect={setFilter} testIDPrefix="notice-filter" />
       </View>
@@ -76,7 +98,8 @@ export default function AnnouncementsScreen() {
           const meta = CATEGORY_META[a.category];
           const Icon = meta.icon;
           return (
-            <Card key={a.id} testID={`announcement-${a.id}`}>
+            <Pressable key={a.id} onPress={() => router.push({ pathname: "/announcements/[id]", params: { id: a.id } })}>
+            <Card testID={`announcement-${a.id}`}>
               <View style={s.head}>
                 <View style={[s.iconWrap, { backgroundColor: bgFor(meta.tone) }]}>
                   <Icon size={20} color={fgFor(meta.tone)} weight="fill" />
@@ -93,6 +116,7 @@ export default function AnnouncementsScreen() {
                 <Text style={s.footerText}>{a.author}</Text>
               </View>
             </Card>
+            </Pressable>
           );
         })}
       </ScrollView>

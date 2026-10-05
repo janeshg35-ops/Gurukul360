@@ -4,6 +4,7 @@ import { todayKey } from "./seed";
 import {
   AttendanceStatus,
   Database,
+  FeePayment,
   Section,
   Student,
 } from "./types";
@@ -249,6 +250,11 @@ export function schoolPerformanceAverage(db: Database): number {
 }
 
 // ---- Formatting ----------------------------------------------------------
+export function paymentMethodLabel(method: FeePayment["method"], reference?: string): string {
+  if (method === "Online" && reference?.startsWith("DEMO-NB-")) return "Net Banking";
+  return method;
+}
+
 export function formatINR(amount: number): string {
   return "\u20B9" + amount.toLocaleString("en-IN");
 }

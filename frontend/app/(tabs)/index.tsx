@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
 import {
+  Buildings,
   CalendarCheck,
   ChalkboardTeacher,
   CaretRight,
   FileText,
   GraduationCap,
-  ListChecks,
+  CalendarBlank,
   Megaphone,
   Receipt,
   SignOut,
@@ -15,9 +16,10 @@ import {
 } from "phosphor-react-native";
 import dayjs from "dayjs";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BarChart, DonutChart, LegendRow } from "@/src/components/charts";
-import { BrandHeader } from "@/src/components/screen-header";
+import { DashboardHeader, DashboardSection, dayGreeting } from "@/src/components/dashboard-header";
 import { Card, Divider } from "@/src/components/ui/primitives";
 import { KpiCard, ListRow, NavTile } from "@/src/components/ui/kpi";
 import { useToast } from "@/src/components/ui/feedback";
@@ -40,15 +42,14 @@ import { makeStyles, spacing, useTheme } from "@/src/theme";
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surfaceSecondary },
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing["3xl"] },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl },
   grid: { flexDirection: "row", gap: spacing.md },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: c.onSurface, marginBottom: spacing.sm },
   cardTitle: { fontSize: 15, fontWeight: "800", color: c.onSurface, marginBottom: spacing.md },
   attRow: { flexDirection: "row", alignItems: "center", gap: spacing.xl },
   legendCol: { flex: 1, gap: spacing.md },
   feeFigures: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.md },
   feeBlock: { gap: 2 },
-  feeLabel: { fontSize: 12, color: c.muted, fontWeight: "600" },
+  feeLabel: { fontSize: 12, color: c.onSurfaceSecondary, fontWeight: "600" },
   feeValue: { fontSize: 16, fontWeight: "800", color: c.onSurface },
   signOut: {
     width: 38,
@@ -63,11 +64,15 @@ const useStyles = makeStyles((c) => ({
   amount: { fontSize: 14, fontWeight: "800", color: c.success },
   feeBarTrack: { height: 12, borderRadius: 999, backgroundColor: c.surfaceTertiary, overflow: "hidden", marginTop: spacing.sm },
   feeBarFill: { height: "100%", borderRadius: 999, backgroundColor: c.success },
+  feeShare: { fontSize: 13, fontWeight: "700", color: c.onSurfaceSecondary, marginBottom: spacing.xs },
+  empty: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
+  emptyText: { fontSize: 14, fontWeight: "600", color: c.onSurfaceSecondary, textAlign: "center" },
 }));
 
 export default function DashboardScreen() {
   const s = useStyles();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { db } = useData();
   const { user, signOut } = useAuth();
@@ -94,17 +99,21 @@ export default function DashboardScreen() {
 
   return (
     <View style={s.root}>
-      <BrandHeader
-        title={`Hello, ${user?.name?.split(" ").slice(0, 2).join(" ") ?? "Principal"}`}
-        subtitle={`${SCHOOL.name} \u00B7 Session ${SCHOOL.session}`}
+      <DashboardHeader
+        greeting={dayGreeting(user?.name ?? "Principal")}
+        role={`Principal · ${SCHOOL.name} · Session ${SCHOOL.session}`}
+        mark={<Buildings size={20} color="#FFFFFF" weight="fill" />}
         right={
           <Pressable style={s.signOut} onPress={onSignOut} testID="dashboard-signout">
             <SignOut size={18} color="#FFFFFF" weight="bold" />
           </Pressable>
         }
       />
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* KPI grid */}
+      <ScrollView
+        contentContainerStyle={[s.content, { paddingBottom: spacing["3xl"] + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <DashboardSection title="School Overview" />
         <View style={{ gap: spacing.md }}>
           <View style={s.grid}>
             <KpiCard
@@ -134,7 +143,8 @@ export default function DashboardScreen() {
               value={recordedToday === 0 ? "—" : `${att.percentage}%`}
               label="Today's Attendance"
               sub={recordedToday === 0 ? `${att.unmarked} not recorded` : `${att.present + att.late}/${att.total} present`}
-              subColor={colors.muted}
+              subColor={colors.onSurfaceSecondary}
+              progress={recordedToday === 0 ? undefined : att.percentage}
               onPress={() => router.push("/(tabs)/attendance")}
               testID="kpi-attendance"
             />
@@ -158,21 +168,11 @@ export default function DashboardScreen() {
               onPress={() => router.push({ pathname: "/reports/[type]", params: { type: "outstanding" } })}
               testID="kpi-outstanding"
             />
-            <KpiCard
-              icon={ListChecks}
-              iconColor={colors.warning}
-              iconBg={colors.warningSoft}
-              value={String(fees.studentsWithDues)}
-              label="Pending Tasks"
-              sub="Fee follow-ups"
-              subColor={colors.muted}
-              onPress={() => router.push({ pathname: "/reports/[type]", params: { type: "outstanding" } })}
-              testID="kpi-tasks"
-            />
+            <View style={{ flex: 1 }} />
           </View>
         </View>
 
-        {/* Attendance overview */}
+        <DashboardSection title="Attendance Overview" />
         <Card testID="attendance-overview-card">
           <Text style={s.cardTitle}>Attendance Overview · Today</Text>
           <View style={s.attRow}>
@@ -197,9 +197,24 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
-        {/* Fee collection overview */}
+        <DashboardSection title="Academic Performance" />
+        <Card testID="performance-overview-card">
+          <View style={s.cardLink}>
+            <Text style={s.cardTitle}>Student Performance · Subject Averages</Text>
+          </View>
+          <BarChart data={subjectBars} maxValue={100} height={110} />
+          <Divider style={{ marginVertical: spacing.md }} />
+          <LegendRow color={colors.brandPrimary} label="School average (Term 1)" value={`${perf}%`} />
+        </Card>
+
+        <DashboardSection title="Fee Overview" />
         <Card testID="fee-overview-card">
           <Text style={s.cardTitle}>Fee Collection Overview</Text>
+          {fees.billed > 0 ? (
+            <Text style={s.feeShare}>
+              {Math.round((fees.collected / fees.billed) * 1000) / 10}% of billed
+            </Text>
+          ) : null}
           <View style={s.feeBarTrack}>
             <View
               style={[
@@ -224,19 +239,9 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
-        {/* Student performance overview */}
-        <Card testID="performance-overview-card">
-          <View style={s.cardLink}>
-            <Text style={s.cardTitle}>Student Performance · Subject Averages</Text>
-          </View>
-          <BarChart data={subjectBars} maxValue={100} height={110} />
-          <Divider style={{ marginVertical: spacing.md }} />
-          <LegendRow color={colors.brandPrimary} label="School average (Term 1)" value={`${perf}%`} />
-        </Card>
-
         {/* Quick access */}
         <View>
-          <Text style={s.sectionTitle}>Quick Access</Text>
+          <DashboardSection title="Quick Access" />
           <View style={s.grid}>
             <NavTile
               icon={FileText}
@@ -270,6 +275,14 @@ export default function DashboardScreen() {
               onPress={() => router.push("/(tabs)/students")}
               testID="tile-students"
             />
+            <NavTile
+              icon={CalendarBlank}
+              iconColor={colors.brandPrimary}
+              iconBg={colors.brandTertiary}
+              label="Timetable"
+              onPress={() => router.push("/timetable")}
+              testID="tile-timetable"
+            />
           </View>
         </View>
 
@@ -281,6 +294,12 @@ export default function DashboardScreen() {
               View all
             </Text>
           </View>
+          {payments.length === 0 ? (
+            <View style={s.empty}>
+              <Receipt size={26} color={colors.success} weight="duotone" />
+              <Text style={s.emptyText}>No fee payments recorded yet.</Text>
+            </View>
+          ) : null}
           {payments.map((p, i) => {
             const stu = getStudent(db, p.studentId);
             return (
@@ -306,7 +325,16 @@ export default function DashboardScreen() {
               View all
             </Text>
           </View>
-          {db.announcements.slice(0, 3).map((a, i) => (
+          {db.announcements.length === 0 ? (
+            <View style={s.empty}>
+              <Megaphone size={26} color={colors.brandPrimary} weight="duotone" />
+              <Text style={s.emptyText}>No announcements yet.</Text>
+            </View>
+          ) : null}
+          {[...db.announcements]
+            .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
+            .slice(0, 3)
+            .map((a, i) => (
             <View key={a.id}>
               {i > 0 ? <Divider /> : null}
               <ListRow

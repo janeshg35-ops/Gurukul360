@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Check } from "phosphor-react-native";
 import { useState, type ReactNode } from "react";
@@ -8,10 +7,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { StackHeader } from "@/src/components/screen-header";
 import { PrimaryButton } from "@/src/components/ui/controls";
+import { DateField } from "@/src/components/ui/date-field";
 import { EmptyState, useToast } from "@/src/components/ui/feedback";
 import { useData, type StudentFormInput } from "@/src/data/store";
 import { formatINR, getStudent } from "@/src/data/compute";
 import { Database, Gender } from "@/src/data/types";
+import { dobBounds, validateDob } from "@/src/utils/date-only";
 import { makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const PREFERRED_FEE_HEADS = ["fh-academic", "fh-annual", "fh-exam", "fh-activity"];
@@ -70,28 +71,6 @@ function defaultFeeHeads(db: Database): string[] {
   return preferred.length > 0 ? preferred : db.feeHeads.map((h) => h.id);
 }
 
-function parseDob(input: string): string | null {
-  const t = input.trim();
-  const dmy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t);
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
-  if (!dmy && !iso) return null;
-  const year = Number(dmy ? dmy[3] : iso![1]);
-  const month = Number(dmy ? dmy[2] : iso![2]);
-  const day = Number(dmy ? dmy[1] : iso![3]);
-  const parsed = dayjs(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
-  if (!parsed.isValid() || parsed.year() !== year || parsed.month() + 1 !== month || parsed.date() !== day) {
-    return null;
-  }
-  if (!parsed.isBefore(dayjs(), "day")) return null;
-  if (parsed.isBefore(dayjs().subtract(40, "year"))) return null;
-  return parsed.format("YYYY-MM-DD");
-}
-
-function formatDob(iso: string): string {
-  const parsed = dayjs(iso);
-  return parsed.isValid() ? parsed.format("DD/MM/YYYY") : iso;
-}
-
 function validPhone(value: string): boolean {
   const digits = value.replace(/\D/g, "");
   return digits.length >= 10 && digits.length <= 15;
@@ -120,7 +99,7 @@ export default function StudentFormScreen() {
   const [classId, setClassId] = useState(existing?.classId ?? "");
   const [sectionId, setSectionId] = useState(existing?.sectionId ?? "");
   const [rollText, setRollText] = useState(existing ? String(existing.rollNo) : "");
-  const [dobText, setDobText] = useState(existing ? formatDob(existing.dob) : "");
+  const [dob, setDob] = useState(existing?.dob?.slice(0, 10) ?? "");
   const [gender, setGender] = useState<Gender | "">(existing?.gender ?? "");
   const [guardianName, setGuardianName] = useState(guardian?.name ?? "");
   const [guardianPhone, setGuardianPhone] = useState(guardian?.phone ?? "");
@@ -166,7 +145,7 @@ export default function StudentFormScreen() {
     const trimmedName = name.trim();
     const trimmedAdmission = admissionNo.trim();
     const roll = Number(rollText);
-    const dob = parseDob(dobText);
+    const dobError = validateDob(dob);
     const section = db.sections.find((sec) => sec.id === sectionId);
 
     if (trimmedName.length < 2) next.name = "Enter the student's full name.";
@@ -190,7 +169,7 @@ export default function StudentFormScreen() {
     ) {
       next.rollText = "This roll number is already used in the selected section.";
     }
-    if (!dob) next.dobText = "Enter a valid past date of birth (DD/MM/YYYY).";
+    if (dobError) next.dobText = dobError;
     if (gender !== "Male" && gender !== "Female") next.gender = "Select a gender.";
     if (guardianName.trim().length < 2) next.guardianName = "Enter the guardian's name.";
     if (!validPhone(guardianPhone)) next.guardianPhone = "Enter a valid guardian phone number.";
@@ -202,7 +181,7 @@ export default function StudentFormScreen() {
     }
 
     setErrors(next);
-    if (Object.values(next).some(Boolean) || !dob || (gender !== "Male" && gender !== "Female")) return null;
+    if (Object.values(next).some(Boolean) || dobError || (gender !== "Male" && gender !== "Female")) return null;
     return {
       name: trimmedName,
       admissionNo: trimmedAdmission,
@@ -350,16 +329,15 @@ export default function StudentFormScreen() {
         </Field>
 
         <Field label="Date of Birth" error={errors.dobText}>
-          <TextInput
-            value={dobText}
-            onChangeText={(t) => {
-              setDobText(t);
+          <DateField
+            value={dob}
+            onChange={(next) => {
+              setDob(next);
               clearError("dobText");
             }}
-            style={s.input}
-            placeholder="DD/MM/YYYY"
-            placeholderTextColor={colors.muted}
-            keyboardType="default"
+            minimumDate={dobBounds().minimumDate}
+            maximumDate={dobBounds().maximumDate}
+            fallbackDate={new Date(new Date().getFullYear() - 12, new Date().getMonth(), new Date().getDate())}
             testID="student-dob-input"
           />
         </Field>

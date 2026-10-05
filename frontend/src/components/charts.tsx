@@ -105,6 +105,49 @@ function DonutCenterBottom({ text }: { text: string }) {
   return <Text style={s.bottom}>{text}</Text>;
 }
 
+/** Compact ring for an existing 0–100 percentage. Does not compute a new figure. */
+export function ProgressRing({
+  value,
+  size = 36,
+  strokeWidth = 4,
+  color,
+}: {
+  value: number;
+  size?: number;
+  strokeWidth?: number;
+  color: string;
+}) {
+  const { colors } = useTheme();
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.max(0, Math.min(value, 100));
+  const len = (pct / 100) * circumference;
+  return (
+    <Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={colors.surfaceTertiary}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      {pct > 0 ? (
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={`${len} ${circumference - len}`}
+          strokeLinecap="round"
+          fill="none"
+        />
+      ) : null}
+    </Svg>
+  );
+}
+
 // ---- Vertical bar chart (View-based) -------------------------------------
 export interface BarDatum {
   label: string;

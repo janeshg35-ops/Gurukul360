@@ -4,6 +4,7 @@ import { SCHOOL } from "@/src/constants/branding";
 import {
   AcademicResult,
   Announcement,
+  Assignment,
   AttendanceRecord,
   Database,
   FeeHead,
@@ -13,7 +14,10 @@ import {
   Student,
   Subject,
   Teacher,
+  TimetableEntry,
 } from "./types";
+import { eligibilityForTeacher, SCHEDULE_SLOTS } from "./timetable-config";
+import { generateTimetable } from "./timetable-generate";
 
 export const DB_VERSION = 1;
 
@@ -33,6 +37,7 @@ const SUBJECTS: Subject[] = [
   { id: "sub-sci", name: "Science" },
   { id: "sub-ss", name: "Social Science" },
   { id: "sub-cs", name: "Computer Science" },
+  { id: "sub-pe", name: "Physical Education" },
 ];
 
 const FEE_HEADS: FeeHead[] = [
@@ -88,7 +93,7 @@ const OCCUPATIONS = [
   "Professor",
 ];
 
-const TEACHERS: Teacher[] = [
+const TEACHER_SEEDS: Omit<Teacher, "eligibleClassIds">[] = [
   { id: "t1", name: "Mrs. Sunita Mehra", subjectIds: ["sub-eng"], classTeacherOf: "s-10-a", phone: "+91 98100 11001", email: "sunita.mehra@mytechpro.co.in" },
   { id: "t2", name: "Mr. Anil Kumar", subjectIds: ["sub-math"], classTeacherOf: "s-10-b", phone: "+91 98100 11002", email: "anil.kumar@mytechpro.co.in" },
   { id: "t3", name: "Ms. Pooja Nanda", subjectIds: ["sub-sci"], classTeacherOf: "s-9-a", phone: "+91 98100 11003", email: "pooja.nanda@mytechpro.co.in" },
@@ -103,7 +108,20 @@ const TEACHERS: Teacher[] = [
   { id: "t12", name: "Mr. Sanjay Kapoor", subjectIds: ["sub-cs"], phone: "+91 98100 11012", email: "sanjay.k@mytechpro.co.in" },
   { id: "t13", name: "Mrs. Meera Nambiar", subjectIds: ["sub-sci"], phone: "+91 98100 11013", email: "meera.n@mytechpro.co.in" },
   { id: "t14", name: "Mr. Alok Verma", subjectIds: ["sub-math"], phone: "+91 98100 11014", email: "alok.v@mytechpro.co.in" },
+  { id: "t15", name: "Mr. Rohan Malhotra", subjectIds: ["sub-pe"], phone: "+91 98100 11015", email: "rohan.malhotra@mytechpro.co.in" },
+  { id: "t16", name: "Mrs. Anjali Kulkarni", subjectIds: ["sub-pe"], phone: "+91 98100 11016", email: "anjali.kulkarni@mytechpro.co.in" },
 ];
+
+const TEACHERS: Teacher[] = TEACHER_SEEDS.map((teacher) => ({
+  ...teacher,
+  eligibleClassIds: eligibilityForTeacher(teacher.id),
+}));
+
+export const PE_SUBJECT: Subject = { id: "sub-pe", name: "Physical Education" };
+
+export function supplementalTeachers(): Teacher[] {
+  return TEACHERS.filter((teacher) => teacher.subjectIds.includes("sub-pe"));
+}
 
 function buildSections(): Section[] {
   const out: Section[] = [];
@@ -134,6 +152,104 @@ function recentSchoolDays(count: number): string[] {
 
 export function todayKey(): string {
   return dayjs().format("YYYY-MM-DD");
+}
+
+function isoDay(offset: number): string {
+  return dayjs().add(offset, "day").format("YYYY-MM-DD");
+}
+
+/** Demo homework. Dates stay relative to the day the seed is built. */
+export function seedAssignments(): Assignment[] {
+  return [
+    {
+      id: "asg-1",
+      title: "Fractions worksheet",
+      instructions: "Complete Exercise 3.2. Show each step and simplify every answer.",
+      classId: "c6",
+      sectionId: "s-6-a",
+      subjectId: "sub-math",
+      teacherId: "t9",
+      assignedDate: isoDay(-2),
+      dueDate: isoDay(5),
+    },
+    {
+      id: "asg-2",
+      title: "Reading comprehension",
+      instructions: "Read the passage The Banyan Tree and answer the questions in complete sentences.",
+      classId: "c6",
+      sectionId: "s-6-a",
+      subjectId: "sub-eng",
+      teacherId: "t11",
+      assignedDate: isoDay(-1),
+      dueDate: isoDay(1),
+    },
+    {
+      id: "asg-3",
+      title: "Plant life cycle",
+      instructions: "Draw and label the stages of a flowering plant. Write five lines under the diagram.",
+      classId: "c6",
+      sectionId: "s-6-a",
+      subjectId: "sub-sci",
+      teacherId: "t13",
+      assignedDate: isoDay(-7),
+      dueDate: isoDay(-1),
+    },
+    {
+      id: "asg-4",
+      title: "Formal letter",
+      instructions: "Write a formal letter to the Principal requesting new books for the class library.",
+      classId: "c10",
+      sectionId: "s-10-a",
+      subjectId: "sub-eng",
+      teacherId: "t1",
+      assignedDate: isoDay(0),
+      dueDate: isoDay(3),
+    },
+    {
+      id: "asg-5",
+      title: "Quadratic equations",
+      instructions: "Solve the ten questions in Exercise 4.1. Box the final roots.",
+      classId: "c10",
+      sectionId: "s-10-a",
+      subjectId: "sub-math",
+      teacherId: "t14",
+      assignedDate: isoDay(0),
+      dueDate: isoDay(6),
+    },
+    {
+      id: "asg-6",
+      title: "Statistics practice",
+      instructions: "Find the mean and median for the data set on page 214. Show the working.",
+      classId: "c10",
+      sectionId: "s-10-b",
+      subjectId: "sub-math",
+      teacherId: "t2",
+      assignedDate: isoDay(-1),
+      dueDate: isoDay(0),
+    },
+    {
+      id: "asg-7",
+      title: "Chemical equations",
+      instructions: "Balance the equations on page 42. Name the type of each reaction.",
+      classId: "c8",
+      sectionId: "s-8-b",
+      subjectId: "sub-sci",
+      teacherId: "t6",
+      assignedDate: isoDay(-8),
+      dueDate: isoDay(-2),
+    },
+    {
+      id: "asg-8",
+      title: "Cell structure diagram",
+      instructions: "Label the animal cell diagram and describe three organelles in your own words.",
+      classId: "c9",
+      sectionId: "s-9-a",
+      subjectId: "sub-sci",
+      teacherId: "t3",
+      assignedDate: isoDay(0),
+      dueDate: isoDay(7),
+    },
+  ];
 }
 
 export function buildDatabase(): Database {
@@ -198,7 +314,7 @@ export function buildDatabase(): Database {
     });
 
     // Academic results — deterministic marks per subject
-    SUBJECTS.forEach((sub, sIdx) => {
+    SUBJECTS.filter((sub) => sub.id !== "sub-pe").forEach((sub, sIdx) => {
       const base = 58 + ((i * 7 + sIdx * 13) % 40); // 58..97
       results.push({
         studentId,
@@ -312,5 +428,21 @@ export function buildDatabase(): Database {
     payments,
     results,
     announcements,
+    assignments: seedAssignments(),
+    timetable: seedTimetable(),
+    scheduleSlots: SCHEDULE_SLOTS.map((slot) => ({ ...slot })),
   };
+}
+
+/** Demo timetable for Class 6-A and Class 10-A, produced by the constraint generator. */
+export function seedTimetable(): TimetableEntry[] {
+  const sections = buildSections();
+  const result = generateTimetable({
+    classes: CLASSES,
+    sections,
+    subjects: SUBJECTS,
+    teachers: TEACHERS,
+    sectionIds: ["s-6-a", "s-10-a"],
+  });
+  return result.success ? result.entries : [];
 }

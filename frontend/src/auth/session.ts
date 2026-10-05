@@ -90,6 +90,12 @@ const TEACHER_AREA = new Set([
   "my-attendance",
   "my-class",
   "my-subjects",
+  "my-assignments",
+  "my-assignment",
+  "my-assignment-form",
+  "teacher-announcements",
+  "teacher-announcement",
+  "my-timetable",
   "account",
 ]);
 
@@ -99,6 +105,13 @@ const STUDENT_AREA = new Set([
   "student-attendance",
   "student-results",
   "student-fees",
+  "student-fee-payment",
+  "student-fee-receipt",
+  "student-assignments",
+  "student-assignment",
+  "student-announcements",
+  "student-announcement",
+  "student-timetable",
   "student-account",
 ]);
 

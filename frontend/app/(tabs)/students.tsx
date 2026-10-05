@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { CaretRight, Plus, UsersThree } from "phosphor-react-native";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 
 import { BrandHeader } from "@/src/components/screen-header";
@@ -14,7 +14,20 @@ import {
   sectionName,
   studentAttendance,
 } from "@/src/data/compute";
+import {
+  filterStudentList,
+  pageWindow,
+  paginateStudents,
+  STUDENT_PAGE_SIZE,
+  StudentListStatus,
+} from "@/src/data/student-query";
 import { makeStyles, spacing, useTheme } from "@/src/theme";
+
+const STATUS_OPTIONS: { key: StudentListStatus; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "active", label: "Active" },
+  { key: "inactive", label: "Inactive" },
+];
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
@@ -43,6 +56,31 @@ const useStyles = makeStyles((c) => ({
   name: { fontSize: 15, fontWeight: "700", color: c.onSurface },
   sub: { fontSize: 13, color: c.muted },
   count: { fontSize: 12, color: "#9CA3AF", paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  pager: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  pageBtn: {
+    minWidth: 36,
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pageBtnOn: { backgroundColor: c.brandPrimary, borderColor: c.brandPrimary },
+  pageText: { fontSize: 13, fontWeight: "700", color: c.onSurface },
+  pageTextOn: { color: c.onBrandPrimary },
+  pageGap: { fontSize: 13, fontWeight: "700", color: c.muted, paddingHorizontal: 2 },
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -55,6 +93,10 @@ const useStyles = makeStyles((c) => ({
   addText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
 }));
 
+function countLabel(value: number): string {
+  return value.toLocaleString("en-IN");
+}
+
 export default function StudentsScreen() {
   const s = useStyles();
   const { colors } = useTheme();
@@ -64,10 +106,12 @@ export default function StudentsScreen() {
   const [query, setQuery] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [sectionFilter, setSectionFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<StudentListStatus>("active");
+  const [page, setPage] = useState(1);
 
   const classOptions = [
     { key: "all", label: "All Classes" },
-    ...db.classes.map((c) => ({ key: c.id, label: c.name })),
+    ...db.classes.map((item) => ({ key: item.id, label: item.name })),
   ];
   const sectionOptions = [
     { key: "all", label: "All Sections" },
@@ -75,21 +119,33 @@ export default function StudentsScreen() {
     { key: "B", label: "Section B" },
   ];
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return activeStudents(db)
-      .filter((st) => (classFilter === "all" ? true : st.classId === classFilter))
-      .filter((st) =>
-        sectionFilter === "all" ? true : sectionName(db, st.sectionId) === sectionFilter,
-      )
-      .filter((st) =>
-        q
-          ? st.name.toLowerCase().includes(q) ||
-            st.admissionNo.toLowerCase().includes(q)
-          : true,
-      )
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [db, query, classFilter, sectionFilter]);
+  const filtered = useMemo(
+    () => filterStudentList(db.students, db.sections, query, classFilter, sectionFilter, statusFilter),
+    [db.students, db.sections, query, classFilter, sectionFilter, statusFilter],
+  );
+  const view = paginateStudents(filtered, page, STUDENT_PAGE_SIZE);
+  const labels = pageWindow(view.current, view.pages);
+
+  useEffect(() => {
+    if (view.current !== page) setPage(view.current);
+  }, [view.current, page]);
+
+  const changeQuery = (value: string) => {
+    setQuery(value);
+    setPage(1);
+  };
+  const changeClass = (value: string) => {
+    setClassFilter(value);
+    setPage(1);
+  };
+  const changeSection = (value: string) => {
+    setSectionFilter(value);
+    setPage(1);
+  };
+  const changeStatus = (value: string) => {
+    setStatusFilter(value as StudentListStatus);
+    setPage(1);
+  };
 
   return (
     <View style={s.root}>
@@ -113,31 +169,83 @@ export default function StudentsScreen() {
         <View style={s.searchWrap}>
           <SearchBar
             value={query}
-            onChangeText={setQuery}
-            placeholder="Search by name or admission no."
+            onChangeText={changeQuery}
+            placeholder="Search by name, admission no., or phone"
             testID="students-search"
           />
         </View>
         <FilterChips
           options={classOptions}
           selected={classFilter}
-          onSelect={setClassFilter}
+          onSelect={changeClass}
           testIDPrefix="class-filter"
         />
         <FilterChips
           options={sectionOptions}
           selected={sectionFilter}
-          onSelect={setSectionFilter}
+          onSelect={changeSection}
           testIDPrefix="section-filter"
         />
+        <FilterChips
+          options={STATUS_OPTIONS}
+          selected={statusFilter}
+          onSelect={changeStatus}
+          testIDPrefix="student-status"
+        />
       </View>
-      <Text style={s.count}>{filtered.length} student(s) found</Text>
+      {view.total > 0 ? (
+        <Text style={s.count} testID="students-page-summary">
+          Showing {countLabel(view.start)}–{countLabel(view.end)} of {countLabel(view.total)} students
+        </Text>
+      ) : (
+        <Text style={s.count} testID="students-page-summary">
+          Showing 0 of 0 students
+        </Text>
+      )}
+      {view.total > 0 ? (
+        <View style={s.pager}>
+          <Pressable
+            style={s.pageBtn}
+            disabled={view.current <= 1}
+            onPress={() => setPage(view.current - 1)}
+            testID="students-page-prev"
+          >
+            <Text style={[s.pageText, view.current <= 1 && { color: colors.muted }]}>Previous</Text>
+          </Pressable>
+          {labels.map((label, index) =>
+            label === "gap" ? (
+              <Text key={`gap-${index}`} style={s.pageGap}>
+                …
+              </Text>
+            ) : (
+              <Pressable
+                key={label}
+                style={[s.pageBtn, label === view.current && s.pageBtnOn]}
+                onPress={() => setPage(label)}
+                testID={`students-page-${label}`}
+              >
+                <Text style={[s.pageText, label === view.current && s.pageTextOn]}>{label}</Text>
+              </Pressable>
+            ),
+          )}
+          <Pressable
+            style={s.pageBtn}
+            disabled={view.current >= view.pages}
+            onPress={() => setPage(view.current + 1)}
+            testID="students-page-next"
+          >
+            <Text style={[s.pageText, view.current >= view.pages && { color: colors.muted }]}>Next</Text>
+          </Pressable>
+        </View>
+      ) : null}
       <FlatList
-        data={filtered}
+        data={view.slice}
         keyExtractor={(item) => item.id}
         contentContainerStyle={s.list}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        initialNumToRender={STUDENT_PAGE_SIZE}
+        windowSize={5}
         ListEmptyComponent={
           <EmptyState
             icon={<UsersThree size={30} color={colors.muted} weight="duotone" />}
@@ -167,6 +275,7 @@ export default function StudentsScreen() {
                 <Text style={s.name}>{item.name}</Text>
                 <Text style={s.sub}>
                   {item.admissionNo} · {className(db, item.classId)} — {sectionName(db, item.sectionId)}
+                  {item.status === "inactive" ? " · Inactive" : ""}
                 </Text>
               </View>
               <Badge label={hasAttendance ? `${attn.percentage}%` : "—"} tone={tone} />

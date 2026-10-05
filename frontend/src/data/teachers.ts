@@ -95,6 +95,7 @@ function teacherFromInput(id: string, input: TeacherFormInput, status: Teacher["
     phone: input.phone.trim(),
     email: input.email.trim(),
     subjectIds: [...input.subjectIds],
+    eligibleClassIds: [],
     status,
   };
   if (input.classTeacherOf) teacher.classTeacherOf = input.classTeacherOf;

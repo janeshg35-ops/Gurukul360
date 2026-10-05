@@ -3,6 +3,8 @@ import type { IconProps } from "phosphor-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { ProgressRing } from "@/src/components/charts";
+import { pressedStyle } from "@/src/components/dashboard-header";
 import { makeStyles, radius, spacing } from "@/src/theme";
 
 type PhosphorIcon = React.ComponentType<IconProps>;
@@ -14,9 +16,14 @@ const useKpiStyles = makeStyles((c) => ({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: c.border,
-    padding: spacing.lg,
+    padding: spacing.md,
     gap: spacing.sm,
     flex: 1,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
   },
   iconWrap: {
     width: 38,
@@ -25,8 +32,8 @@ const useKpiStyles = makeStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  value: { fontSize: 22, fontWeight: "800", color: c.onSurface },
-  label: { fontSize: 13, color: c.muted, fontWeight: "500" },
+  value: { fontSize: 20, fontWeight: "800", color: c.onSurface },
+  label: { fontSize: 13, color: c.onSurfaceSecondary, fontWeight: "600" },
   sub: { fontSize: 12, fontWeight: "600" },
 }));
 
@@ -38,6 +45,7 @@ export function KpiCard({
   label,
   sub,
   subColor,
+  progress,
   onPress,
   testID,
 }: {
@@ -48,18 +56,25 @@ export function KpiCard({
   label: string;
   sub?: string;
   subColor?: string;
+  /** Existing 0–100 figure drawn as a ring. Omit when there is nothing to show. */
+  progress?: number;
   onPress?: () => void;
   testID?: string;
 }) {
   const s = useKpiStyles();
   return (
     <Pressable
-      style={({ pressed }) => [s.card, pressed && onPress && { opacity: 0.8 }]}
+      style={({ pressed }) => [s.card, onPress ? pressedStyle(pressed) : undefined]}
       onPress={onPress}
       testID={testID}
     >
-      <View style={[s.iconWrap, { backgroundColor: iconBg }]}>
-        <Icon size={22} color={iconColor} weight="fill" />
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={[s.iconWrap, { backgroundColor: iconBg }]}>
+          <Icon size={22} color={iconColor} weight="fill" />
+        </View>
+        {typeof progress === "number" ? (
+          <ProgressRing value={progress} size={34} strokeWidth={4} color={iconColor} />
+        ) : null}
       </View>
       <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>
         {value}
@@ -77,10 +92,12 @@ const useTileStyles = makeStyles((c) => ({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: c.border,
-    padding: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
+    minHeight: 84,
   },
   iconWrap: {
     width: 44,
@@ -89,7 +106,7 @@ const useTileStyles = makeStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  label: { fontSize: 12, fontWeight: "600", color: c.onSurface, textAlign: "center" },
+  label: { fontSize: 12, fontWeight: "700", color: c.onSurface, textAlign: "center" },
 }));
 
 export function NavTile({
@@ -110,7 +127,7 @@ export function NavTile({
   const s = useTileStyles();
   return (
     <Pressable
-      style={({ pressed }) => [s.tile, pressed && { opacity: 0.8 }]}
+      style={({ pressed }) => [s.tile, pressedStyle(pressed)]}
       onPress={onPress}
       testID={testID}
     >

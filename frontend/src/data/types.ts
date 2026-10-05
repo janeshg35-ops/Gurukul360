@@ -34,10 +34,14 @@ export interface Subject {
   name: string;
 }
 
+export type Weekday = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday";
+
 export interface Teacher {
   id: string;
   name: string;
   subjectIds: string[];
+  // Classes this teacher may teach. Not derived from classTeacherOf.
+  eligibleClassIds: string[];
   classTeacherOf?: string; // sectionId
   phone: string;
   email: string;
@@ -114,6 +118,40 @@ export interface Announcement {
   author: string;
 }
 
+export interface Assignment {
+  id: string;
+  title: string;
+  instructions: string;
+  classId: string;
+  sectionId: string;
+  subjectId: string;
+  teacherId: string;
+  assignedDate: string; // YYYY-MM-DD
+  dueDate: string; // YYYY-MM-DD
+}
+
+export interface TimetableEntry {
+  id: string;
+  day: Weekday;
+  periodId: string;
+  classId: string;
+  sectionId: string;
+  subjectId: string;
+  teacherId: string;
+  room: string;
+}
+
+export type ScheduleSlotType = "CLASS" | "BREAK" | "ASSEMBLY" | "ACTIVITY";
+
+export interface ScheduleSlot {
+  id: string;
+  order: number;
+  label: string;
+  start: string;
+  end: string;
+  type: ScheduleSlotType;
+}
+
 export interface Database {
   version: number;
   school: School;
@@ -128,4 +166,7 @@ export interface Database {
   payments: FeePayment[];
   results: AcademicResult[];
   announcements: Announcement[];
+  assignments: Assignment[];
+  timetable: TimetableEntry[];
+  scheduleSlots: ScheduleSlot[];
 }

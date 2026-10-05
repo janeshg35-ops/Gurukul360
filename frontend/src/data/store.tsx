@@ -9,7 +9,10 @@ import React, {
 } from "react";
 
 import { storage } from "@/src/utils/storage";
-import { buildDatabase, DB_VERSION } from "./seed";
+import { assignmentFromInput, AssignmentInput, validateAssignment } from "./assignments";
+import { buildDatabase, DB_VERSION, PE_SUBJECT, seedAssignments, seedTimetable, supplementalTeachers } from "./seed";
+import { eligibilityForTeacher, SCHEDULE_SLOTS } from "./timetable-config";
+import { timetableDirectory, validateTimetable } from "./timetable";
 import {
   insertTeacher,
   markTeacherActive,
@@ -17,7 +20,7 @@ import {
   patchTeacher,
   TeacherFormInput,
 } from "./teachers";
-import { AttendanceStatus, Database, FeePayment, Gender, Guardian, Student } from "./types";
+import { AnnouncementCategory, AttendanceStatus, Database, FeePayment, Gender, Guardian, Student, TimetableEntry } from "./types";
 
 const DB_KEY = "gurukul360.db.v1";
 
@@ -61,6 +64,16 @@ interface DataContextValue {
   updateTeacher: (id: string, input: TeacherFormInput) => boolean;
   deactivateTeacher: (id: string) => void;
   activateTeacher: (id: string) => "ok" | "conflict" | "missing";
+  // Assignments
+  addAssignment: (input: AssignmentInput) => string | null;
+  updateAssignment: (id: string, input: AssignmentInput) => boolean;
+  deleteAssignment: (id: string) => void;
+  // Communication
+  addAnnouncement: (input: AnnouncementInput) => string | null;
+  updateAnnouncement: (id: string, input: AnnouncementInput) => boolean;
+  deleteAnnouncement: (id: string) => void;
+  // Timetable
+  replaceTimetable: (entries: TimetableEntry[]) => boolean;
   // Demo reset
   resetDemo: () => void;
 }
@@ -74,6 +87,26 @@ function admissionTaken(db: Database, admissionNo: string, exceptId?: string): b
 
 function uniqueKey(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const ANNOUNCEMENT_CATEGORIES: AnnouncementCategory[] = ["Notice", "Announcement", "Event", "Circular"];
+
+export interface AnnouncementInput {
+  title: string;
+  body: string;
+  category: AnnouncementCategory;
+  date: string;
+  audience: string;
+  author: string;
+}
+
+function announcementError(input: AnnouncementInput): string | null {
+  if (!input.title.trim()) return "Title is required.";
+  if (!input.body.trim()) return "Body is required.";
+  if (!ANNOUNCEMENT_CATEGORIES.includes(input.category)) return "Category is required.";
+  if (!input.date || !dayjs(input.date).isValid()) return "Date is required.";
+  if (!input.audience.trim()) return "Audience is required.";
+  return null;
 }
 
 function avatarIndexFor(name: string): number {
@@ -105,8 +138,20 @@ function studentFromInput(id: string, guardianId: string, input: StudentFormInpu
 const DataContext = createContext<DataContextValue | null>(null);
 
 function nextReceiptNo(db: Database): string {
-  const n = db.payments.length + 1001;
-  return `RCPT-26-${n}`;
+  const used = new Set(db.payments.map((payment) => payment.receiptNo));
+  let serial = 1001;
+  for (const receipt of used) {
+    const match = /^RCPT-26-(\d+)$/.exec(receipt);
+    if (!match) continue;
+    const value = Number(match[1]);
+    if (Number.isInteger(value) && value >= serial) serial = value + 1;
+  }
+  let candidate = `RCPT-26-${serial}`;
+  while (used.has(candidate)) {
+    serial += 1;
+    candidate = `RCPT-26-${serial}`;
+  }
+  return candidate;
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
@@ -124,7 +169,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           try {
             const parsed = JSON.parse(raw) as Database;
             if (parsed && parsed.version === DB_VERSION) {
-              setDb(parsed);
+              setDb(withTimetable(withSchedule(withTeacherEligibility(withAssignments(parsed)))));
             }
           } catch {
             // fall back to seed already in state
@@ -279,6 +324,94 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return "ok";
   }, [db]);
 
+  const addAssignment = useCallback((input: AssignmentInput): string | null => {
+    if (validateAssignment(db, input)) return null;
+    const id = uniqueKey("asg");
+    setDb((prev) => {
+      if (validateAssignment(prev, input)) return prev;
+      return { ...prev, assignments: [...prev.assignments, assignmentFromInput(id, input)] };
+    });
+    return id;
+  }, [db]);
+
+  const updateAssignment = useCallback((id: string, input: AssignmentInput): boolean => {
+    if (!db.assignments.some((item) => item.id === id) || validateAssignment(db, input)) return false;
+    setDb((prev) => {
+      if (!prev.assignments.some((item) => item.id === id) || validateAssignment(prev, input)) return prev;
+      return {
+        ...prev,
+        assignments: prev.assignments.map((item) => (item.id === id ? assignmentFromInput(id, input) : item)),
+      };
+    });
+    return true;
+  }, [db]);
+
+  const deleteAssignment = useCallback((id: string) => {
+    setDb((prev) => ({ ...prev, assignments: prev.assignments.filter((item) => item.id !== id) }));
+  }, []);
+
+  const addAnnouncement = useCallback((input: AnnouncementInput): string | null => {
+    if (announcementError(input)) return null;
+    const id = uniqueKey("a");
+    setDb((prev) => {
+      if (announcementError(input)) return prev;
+      return {
+        ...prev,
+        announcements: [
+          ...prev.announcements,
+          {
+            id,
+            title: input.title.trim(),
+            body: input.body.trim(),
+            category: input.category,
+            date: input.date,
+            audience: input.audience.trim(),
+            author: input.author.trim(),
+          },
+        ],
+      };
+    });
+    return id;
+  }, []);
+
+  const updateAnnouncement = useCallback((id: string, input: AnnouncementInput): boolean => {
+    if (announcementError(input) || !db.announcements.some((item) => item.id === id)) return false;
+    setDb((prev) => {
+      if (announcementError(input) || !prev.announcements.some((item) => item.id === id)) return prev;
+      return {
+        ...prev,
+        announcements: prev.announcements.map((item) =>
+          item.id === id
+            ? {
+                id,
+                title: input.title.trim(),
+                body: input.body.trim(),
+                category: input.category,
+                date: input.date,
+                audience: input.audience.trim(),
+                author: input.author.trim(),
+              }
+            : item,
+        ),
+      };
+    });
+    return true;
+  }, [db]);
+
+  const deleteAnnouncement = useCallback((id: string) => {
+    setDb((prev) => ({ ...prev, announcements: prev.announcements.filter((item) => item.id !== id) }));
+  }, []);
+
+  const replaceTimetable = useCallback((entries: TimetableEntry[]): boolean => {
+    const directory = timetableDirectory(db);
+    if (validateTimetable(entries, directory).length > 0) return false;
+    setDb((prev) => {
+      if (validateTimetable(entries, timetableDirectory(prev)).length > 0) return prev;
+      return { ...prev, timetable: entries };
+    });
+    return true;
+  }, [db]);
+
   const resetDemo = useCallback(() => {
     setDb(buildDatabase());
   }, []);
@@ -297,12 +430,55 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateTeacher,
         deactivateTeacher,
         activateTeacher,
+        addAssignment,
+        updateAssignment,
+        deleteAssignment,
+        addAnnouncement,
+        updateAnnouncement,
+        deleteAnnouncement,
+        replaceTimetable,
         resetDemo,
       }}
     >
       {children}
     </DataContext.Provider>
   );
+}
+
+/** Keeps a saved version-1 database. Fills homework only when the field was never stored. */
+function withAssignments(parsed: Database): Database {
+  if (Array.isArray(parsed.assignments)) return parsed;
+  return { ...parsed, assignments: seedAssignments() };
+}
+
+function withTeacherEligibility(parsed: Database): Database {
+  let changed = false;
+  const teachers = parsed.teachers.map((teacher) => {
+    if (Array.isArray(teacher.eligibleClassIds)) return teacher;
+    changed = true;
+    return { ...teacher, eligibleClassIds: eligibilityForTeacher(teacher.id) };
+  });
+  return changed ? { ...parsed, teachers } : parsed;
+}
+
+function withSchedule(parsed: Database): Database {
+  let next = parsed;
+  if (!next.subjects.some((subject) => subject.id === PE_SUBJECT.id)) {
+    next = { ...next, subjects: [...next.subjects, PE_SUBJECT] };
+  }
+  const missingTeachers = supplementalTeachers().filter((teacher) => !next.teachers.some((item) => item.id === teacher.id));
+  if (missingTeachers.length > 0) {
+    next = { ...next, teachers: [...next.teachers, ...missingTeachers] };
+  }
+  if (!Array.isArray(next.scheduleSlots)) {
+    next = { ...next, scheduleSlots: SCHEDULE_SLOTS.map((slot) => ({ ...slot })) };
+  }
+  return next;
+}
+
+function withTimetable(parsed: Database): Database {
+  if (Array.isArray(parsed.timetable)) return parsed;
+  return { ...parsed, timetable: seedTimetable() };
 }
 
 export function useData(): DataContextValue {
