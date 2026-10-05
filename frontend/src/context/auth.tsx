@@ -7,7 +7,7 @@ import React, {
 } from "react";
 
 import { authenticate, SessionUser } from "@/src/auth/session";
-import { Teacher } from "@/src/data/types";
+import { Teacher, Student } from "@/src/data/types";
 import { storage } from "@/src/utils/storage";
 
 const SESSION_KEY = "gurukul360.session.v1";
@@ -21,7 +21,8 @@ interface AuthContextValue {
     username: string,
     password: string,
     teachers?: Teacher[],
-  ) => { ok: boolean; error?: string; role?: "Principal" | "Teacher" };
+    students?: Student[],
+  ) => { ok: boolean; error?: string; role?: "Principal" | "Teacher" | "Student" };
   signOut: () => void;
 }
 
@@ -51,8 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn = useCallback((username: string, password: string, teachers: Teacher[] = []) => {
-    const res = authenticate(username, password, teachers);
+  const signIn = useCallback((
+    username: string,
+    password: string,
+    teachers: Teacher[] = [],
+    students: Student[] = [],
+  ) => {
+    const res = authenticate(username, password, teachers, students);
     if (!res.ok) return { ok: false as const, error: res.error };
     setUser(res.session);
     storage.secureSet(SESSION_KEY, JSON.stringify(res.session));

@@ -30,6 +30,7 @@ export default function RootLayout() {
                         <Stack.Screen name="login" />
                         <Stack.Screen name="(tabs)" />
                         <Stack.Screen name="(teacher)" />
+                        <Stack.Screen name="(student)" />
                         <Stack.Screen
                           name="fees/payment"
                           options={{ presentation: "modal" }}

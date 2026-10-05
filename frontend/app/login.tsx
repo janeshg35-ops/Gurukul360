@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/src/components/ui/controls";
 import { Logo } from "@/src/components/ui/primitives";
-import { PRODUCT, PRINCIPAL_CREDENTIALS, TEACHER_DEMO_PASSWORD } from "@/src/constants/branding";
+import { PRODUCT, PRINCIPAL_CREDENTIALS, STUDENT_DEMO_PASSWORD, TEACHER_DEMO_PASSWORD } from "@/src/constants/branding";
 import { useAuth } from "@/src/context/auth";
 import { useData } from "@/src/data/store";
 import { makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -89,10 +89,12 @@ export default function LoginScreen() {
     if (!dataReady) return;
     setLoading(true);
     setTimeout(() => {
-      const res = signIn(username, password, db.teachers);
+      const res = signIn(username, password, db.teachers, db.students);
       setLoading(false);
       if (res.ok) {
-        router.replace(res.role === "Teacher" ? "/(teacher)" : "/(tabs)");
+        router.replace(
+          res.role === "Teacher" ? "/(teacher)" : res.role === "Student" ? "/(student)" : "/(tabs)",
+        );
       } else {
         setError(res.error ?? "Login failed.");
       }
@@ -185,6 +187,8 @@ export default function LoginScreen() {
             </Text>
             <Text style={[s.demoTitle, { marginTop: spacing.sm }]}>Demo Teacher:</Text>
             <Text style={s.demoLine}>Use any active teacher email / {TEACHER_DEMO_PASSWORD}</Text>
+            <Text style={[s.demoTitle, { marginTop: spacing.sm }]}>Demo Student:</Text>
+            <Text style={s.demoLine}>MDS61000 / {STUDENT_DEMO_PASSWORD}</Text>
           </View>
         </View>
       </KeyboardAwareScrollView>

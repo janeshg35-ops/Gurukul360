@@ -1,7 +1,7 @@
 import { useRootNavigationState, useRouter, useSegments } from "expo-router";
 import { useEffect, type ReactNode } from "react";
 
-import { isLiveTeacherSession, nextRoute } from "@/src/auth/session";
+import { isLiveStudentSession, isLiveTeacherSession, nextRoute } from "@/src/auth/session";
 import { useAuth } from "@/src/context/auth";
 import { useData } from "@/src/data/store";
 
@@ -20,9 +20,14 @@ export function RoleGate({ children }: { children: ReactNode }) {
       if (top !== "login") router.replace("/login");
       return;
     }
+    if (user?.role === "Student" && !isLiveStudentSession(user, db.students)) {
+      signOut();
+      if (top !== "login") router.replace("/login");
+      return;
+    }
     const dest = nextRoute(user, top);
     if (dest) router.replace(dest);
-  }, [authReady, dataReady, navigationState?.key, user, db.teachers, top, signOut, router]);
+  }, [authReady, dataReady, navigationState?.key, user, db.teachers, db.students, top, signOut, router]);
 
   return children;
 }

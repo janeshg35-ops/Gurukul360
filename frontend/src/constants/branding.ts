@@ -33,3 +33,6 @@ export const PRINCIPAL = {
 
 // Shared demo password for every active teacher. Not stored on the Teacher record.
 export const TEACHER_DEMO_PASSWORD = "Teacher@123";
+
+// Shared demo password for every active student. Not stored on the Student record.
+export const STUDENT_DEMO_PASSWORD = "Student@123";
