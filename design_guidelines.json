@@ -1,0 +1,194 @@
+{
+  "app_name": "Gurukul360",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A highly professional, credible, and information-dense enterprise SaaS platform that emphasizes operational clarity and trust.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#111827",
+    "surfaceSecondary": "#F9FAFB",
+    "onSurfaceSecondary": "#1F2937",
+    "surfaceTertiary": "#F3F4F6",
+    "onSurfaceTertiary": "#374151",
+    "surfaceInverse": "#111827",
+    "onSurfaceInverse": "#F9FAFB",
+    "brand": "#1E3A8A",
+    "brandPrimary": "#1E3A8A",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#3B82F6",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#EFF6FF",
+    "onBrandTertiary": "#1E3A8A",
+    "success": "#059669",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D97706",
+    "onWarning": "#FFFFFF",
+    "error": "#DC2626",
+    "onError": "#FFFFFF",
+    "info": "#4B5563",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E7EB",
+    "borderStrong": "#D1D5DB",
+    "divider": "#F3F4F6",
+    "muted": "#6B7280",
+    "onBrand": "#FFFFFF"
+  },
+  "typography": {
+    "displayFontFamily": "Geist",
+    "textFontFamily": "Geist",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Handle spacing correctly dont have extra spaces where its not required, handle padding and margin corectly and subtle for buttons and components",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Use on bottom tab bar when content scrolls behind it",
+      "Use on pinned filter rows/segmented controls over scrolling content",
+      "Ensure text on glass has enough contrast (apply tinted base underneath)"
+    ],
+    "dont's": [
+      "Never apply to every button, list row, or form input",
+      "Never use for body content regions",
+      "Do not rely solely on blur for contrast"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Login",
+      "purpose": "Secure authentication gate for Principal, Teacher, and Guardian roles.",
+      "states": {
+        "loading": "Spinner on 'Sign In' button, disabled inputs.",
+        "empty": "N/A",
+        "error": "Inline validation messages below inputs, or error banner below header."
+      },
+      "layout": "Minimalist centered form. MYTECH logo prominent at the top. Single-column input fields (Email/ID, Password). Large sticky primary button. Subtle bottom text indicating 'Future roles: Teacher & Parent/Guardian coming soon'."
+    },
+    {
+      "name": "Principal Dashboard",
+      "purpose": "Command center for the Principal offering quick snapshot of critical school metrics.",
+      "states": {
+        "loading": "Skeleton loaders for KPI cards and charts.",
+        "empty": "Placeholder cards with 'No data available yet' illustration.",
+        "error": "Error state card with a 'Retry' button."
+      },
+      "layout": "Scrollable view. Top section: Welcome header with date. Next: 2-column grid of KPI summary cards (Total Students, Teachers, Today's Attendance %, Fee Collection, Pending Tasks). Below: Sectioned blocks for Recent Fee Activity and Important Announcements. Glassmorphic header when scrolling."
+    },
+    {
+      "name": "Student Management",
+      "purpose": "Searchable, filterable directory of all students.",
+      "states": {
+        "loading": "Skeleton list rows.",
+        "empty": "Illustration of an empty folder with 'No students found matching your criteria.'",
+        "error": "Readable error message with a 'Retry' button."
+      },
+      "layout": "Sticky search bar and scrollable horizontal filter chips (Class, Section) below header. Vertical list of students (Avatar, Name, Admission No, Class). List items are 56pt height min. Tapping a row pushes to 'Student Profile' detailed view."
+    },
+    {
+      "name": "Student Profile",
+      "purpose": "Comprehensive view of a single student's data.",
+      "states": {
+        "loading": "Skeleton blocks for header and tabs.",
+        "empty": "N/A",
+        "error": "Error banner at the top of the profile."
+      },
+      "layout": "Header: Student photo/avatar with basic info (Name, Class, Roll No). Below: Segmented control (Overview, Attendance, Fees, Academics). Scrollable content below depending on selected tab. Sticky 'Edit/Action' FAB if required."
+    },
+    {
+      "name": "Attendance",
+      "purpose": "Live daily attendance tracking and editing.",
+      "states": {
+        "loading": "Skeleton rows.",
+        "empty": "Illustration 'Select a class to view attendance.'",
+        "error": "Failed to load attendance list banner with retry action."
+      },
+      "layout": "Top sticky filters (Date picker, Class, Section). List of students with segmented controls or radio buttons for Present (Success color), Absent (Error color), Late (Warning color). Sticky 'Save Attendance' primary CTA at the bottom."
+    },
+    {
+      "name": "Fees",
+      "purpose": "Manage fee collection, outstanding dues, and generate receipts.",
+      "states": {
+        "loading": "Skeleton list rows for fee records.",
+        "empty": "Illustration 'No fee records found for this term.'",
+        "error": "Failed to process payment error modal."
+      },
+      "layout": "Summary KPI at the top (Total Collected, Outstanding). Tabbed view (Collected vs Pending). List rows showing Student Name, Amount, Status Badge. Floating Action Button to 'Record Demo Payment'. Payment form opens in a full-screen sheet."
+    },
+    {
+      "name": "Reports",
+      "purpose": "Generate, export, and share operational reports.",
+      "states": {
+        "loading": "Generating PDF/CSV spinner in a modal.",
+        "empty": "N/A",
+        "error": "Toast or modal: 'Failed to generate report'."
+      },
+      "layout": "Grid of report types (Student, Attendance, Fees, Performance). Tapping opens a configuration sheet (Filters: Class, Date range). Bottom sticky CTA 'Generate & Share' triggering the native share sheet."
+    }
+  ],
+  "images": {
+    "mytech_logo": {
+      "url": "https://images.unsplash.com/photo-1767037426287-54717e5c8044?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHwxfHxibGFjayUyMG1vbm9ncmFtJTIwbGV0dGVyJTIwTSUyMHR5cG9ncmFwaHklMjBsb2dvJTIwdHJhbnNwYXJlbnR8ZW58MHx8fHwxNzkxMTcyNDkxfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "MYTECH Black Monogram Logo"
+    },
+    "school_campus_bg": {
+      "url": "https://images.pexels.com/photos/18145430/pexels-photo-18145430.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Modern School Campus Building"
+    },
+    "student_avatar_1": {
+      "url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwyfHxwb3J0cmFpdCUyMHByb2Zlc3Npb25hbCUyMHN0dWRlbnQlMjBoZWFkc2hvdHxlbnwwfHx8fDE3OTExNzI0ODR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Student Portrait 1"
+    },
+    "student_avatar_2": {
+      "url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHByb2Zlc3Npb25hbCUyMHN0dWRlbnQlMjBoZWFkc2hvdHxlbnwwfHx8fDE3OTExNzI0ODR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Student Portrait 2"
+    },
+    "empty_state_folder": {
+      "url": "https://images.pexels.com/photos/8947771/pexels-photo-8947771.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Empty Document Folder Illustration"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette. Note the explicit user request for 'Deep professional blue' combined with 'Charcoal/black base', which overrides the standard blue ban.",
+    "Implement a 2-column grid pattern for the Dashboard KPIs to maximize information density without feeling cramped, leveraging standard spacing variables.",
+    "Ensure the Attendance module provides immediate visual feedback using the defined 'success' (Present), 'warning' (Late), and 'error' (Absent) status tokens.",
+    "Implement a realistic sticky bottom CTA for actions like 'Save Attendance' or 'Generate & Share' (Reports) over scrolling content.",
+    "Mock all backend responses locally but design the state management to appear as if it's connected (changing attendance reflects on the dashboard).",
+    "In the Student Profile header, apply a gradient scrim over the background image (if used) to guarantee text contrast, as mandated by the texture guidelines.",
+    "Use Phosphor icons with consistent weight (preferably filled for active tabs, outlined otherwise).",
+    "Integrate native share functionality via `expo-sharing` and `expo-print` for the PDF/CSV mock generation in the Reports module."
+  ]
+}

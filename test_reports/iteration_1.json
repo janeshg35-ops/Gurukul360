@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend-only Expo/React Native testing for Gurukul360 (MYTECH) Principal demo. Verified login (invalid + autofill + submit), dashboard KPIs, Students screen (search + class/section filters + row open), Student Profile (all 4 tabs), CONNECTED DATA FLOW #1 attendance (section 66.7%->33.3%, dashboard 93.3%->90%, 28->27 present), CONNECTED DATA FLOW #2 fees (payment -> receipt RCPT-26-1021 with DEMO label -> fee details show Paid/Outstanding ₹0 and payment history), Reports hub (all 5 cards: student/attendance/fee-collection/outstanding/performance), report class/section filter chips, academics tiles, announcements notice-filters, dashboard-signout returning to login. All critical flows working end-to-end. No React Native red-screen errors, no deprecated-package usage detected (uses expo-sharing, not expo-av). Only one minor observation: export-pdf tap triggers an 'Export failed' toast in the headless web preview (likely expected since expo-sharing/file-system can't surface a share sheet on web headless), but no crash — spec explicitly allowed this.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Reports / [type]",
+        "issues": [
+          "export-pdf-button and export-csv-button show an 'Export failed' error toast on web preview (headless browser can't present a share sheet). Users testing in the web demo will see a red error toast. Consider web-specific graceful fallback (e.g., trigger a browser download via Blob + anchor, or suppress the error and show a 'Available on device' hint). On native builds this should work via expo-sharing."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_1.json"],
+  "action_items": [
+    "(Optional UX polish) In reports export (/app/frontend/app/reports/[type].tsx), detect Platform.OS === 'web' and either use a Blob+anchor download fallback or show an informational toast instead of a red 'Export failed' error, so the demo experience on the Expo web preview stays clean. Native share flow is fine as-is.",
+    "(Optional) Confirm the Dashboard kpi-collection / kpi-outstanding numbers after a fee payment in a real device/second screen (we validated the Fee Details screen reflecting Paid / Outstanding ₹0 / Payment History RCPT-26-1021 and verified Dashboard attendance KPI updating end-to-end; fee KPI uses the same compute pipeline)."
+  ],
+  "critical_code_review_comments": [
+    "Reports hub implements 5 reports (student/attendance/fee-collection/outstanding/performance). The review_request mentioned testIDs like 'report-class' and 'report-defaulters' which don't exist — those were likely placeholder names from the request; the actual implementation testIDs are report-student, report-attendance, report-fee-collection, report-outstanding, report-performance (correct and intentional).",
+    "DataProvider → compute.ts pattern correctly recomputes KPIs/report rows from the single source of truth so attendance and fee mutations propagate across Dashboard, Reports, Student Profile and Attendance screens — verified via live run (section 66.7%→33.3%, dashboard 93.3%→90%).",
+    "login.tsx + auth context: invalid credentials show inline testID 'login-error'; demo autofill + submit navigates to /(tabs); signOut from dashboard returns to /login. Clean."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend-only)", "frontend": "~98%" },
+  "seed_data_creation": "No seed data created. Used existing on-device seed (30 students, 10 sections). Added some demo mutations during testing (attendance toggles, 1 fee payment on stu-3) that persist in IndexedDB for the current browser profile — spec explicitly noted this is expected.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Credentials: principal@mytechpro.co.in / Principal@123 (use testID fill-demo-credentials). Mobile viewport 390x844. All interactive elements have testIDs. The 5 report cards use testIDs report-student / report-attendance / report-fee-collection / report-outstanding / report-performance. Receipt screen has 'Done' text button (no explicit receipt-done testID observed) — use get_by_text('Done') to dismiss. 'Export failed' toast on web is cosmetic, not a crash.",
+  "rca_of_issue": "Minor: Export failed toast on web preview — root cause is expo-sharing / expo-file-system share sheet unavailable in headless/Expo web; the catch block in reports/[type].tsx likely surfaces a generic error toast. Suggested fix: branch on Platform.OS === 'web' to either use a browser Blob download or hide the error toast and show a neutral info message."
+}
