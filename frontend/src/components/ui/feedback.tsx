@@ -125,7 +125,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [opacity],
   );
 
-  useEffect(() => () => timer.current && clearTimeout(timer.current), []);
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
   const iconFor = (tone: ToastTone) => {
     const props = { size: 20, weight: "fill" as const };
