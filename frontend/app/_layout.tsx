@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { RoleGate } from "@/src/components/role-gate";
 import { ErrorBoundary } from "@/src/components/error-boundary";
 import { ToastProvider } from "@/src/components/ui/feedback";
 import { AuthProvider } from "@/src/context/auth";
@@ -23,19 +24,22 @@ export default function RootLayout() {
               <AuthProvider>
                 <DataProvider>
                   <ToastProvider>
-                    <Stack screenOptions={{ headerShown: false }}>
-                      <Stack.Screen name="index" />
-                      <Stack.Screen name="login" />
-                      <Stack.Screen name="(tabs)" />
-                      <Stack.Screen
-                        name="fees/payment"
-                        options={{ presentation: "modal" }}
-                      />
-                      <Stack.Screen
-                        name="fees/receipt"
-                        options={{ presentation: "modal" }}
-                      />
-                    </Stack>
+                    <RoleGate>
+                      <Stack screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="index" />
+                        <Stack.Screen name="login" />
+                        <Stack.Screen name="(tabs)" />
+                        <Stack.Screen name="(teacher)" />
+                        <Stack.Screen
+                          name="fees/payment"
+                          options={{ presentation: "modal" }}
+                        />
+                        <Stack.Screen
+                          name="fees/receipt"
+                          options={{ presentation: "modal" }}
+                        />
+                      </Stack>
+                    </RoleGate>
                   </ToastProvider>
                 </DataProvider>
               </AuthProvider>

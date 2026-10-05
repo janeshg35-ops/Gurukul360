@@ -23,6 +23,11 @@ export function getTeacher(db: Database, id: string): Teacher | undefined {
   return db.teachers.find((t) => t.id === id);
 }
 
+export function findActiveTeacherByEmail(teachers: Teacher[], email: string): Teacher | undefined {
+  const key = email.trim().toLowerCase();
+  return teachers.find((t) => isActiveTeacher(t) && t.email.trim().toLowerCase() === key);
+}
+
 export function validTeacherEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }

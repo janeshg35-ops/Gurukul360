@@ -7,8 +7,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/src/components/ui/controls";
 import { Logo } from "@/src/components/ui/primitives";
-import { PRINCIPAL_CREDENTIALS, PRODUCT } from "@/src/constants/branding";
+import { PRODUCT, PRINCIPAL_CREDENTIALS, TEACHER_DEMO_PASSWORD } from "@/src/constants/branding";
 import { useAuth } from "@/src/context/auth";
+import { useData } from "@/src/data/store";
 import { makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const useStyles = makeStyles((c) => ({
@@ -74,6 +75,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { signIn } = useAuth();
+  const { db, ready: dataReady } = useData();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -84,22 +86,17 @@ export default function LoginScreen() {
 
   const onLogin = () => {
     setError(null);
+    if (!dataReady) return;
     setLoading(true);
     setTimeout(() => {
-      const res = signIn(username, password);
+      const res = signIn(username, password, db.teachers);
       setLoading(false);
       if (res.ok) {
-        router.replace("/(tabs)");
+        router.replace(res.role === "Teacher" ? "/(teacher)" : "/(tabs)");
       } else {
         setError(res.error ?? "Login failed.");
       }
     }, 450);
-  };
-
-  const fillDemo = () => {
-    setUsername(PRINCIPAL_CREDENTIALS.username);
-    setPassword(PRINCIPAL_CREDENTIALS.password);
-    setError(null);
   };
 
   return (
@@ -122,8 +119,7 @@ export default function LoginScreen() {
 
         <View style={[s.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
           <View>
-            <Text style={s.heading}>Principal Login</Text>
-            <Text style={s.headingSub}>Sign in to the management console</Text>
+            <Text style={s.heading}>Login</Text>
           </View>
 
           {error ? (
@@ -139,7 +135,7 @@ export default function LoginScreen() {
               <TextInput
                 value={username}
                 onChangeText={setUsername}
-                placeholder="principal@mytechpro.co.in"
+                placeholder="Enter your username"
                 placeholderTextColor={colors.muted}
                 style={s.input}
                 autoCapitalize="none"
@@ -180,20 +176,16 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <PrimaryButton label="Sign In" onPress={onLogin} loading={loading} testID="login-submit-button" />
+          <PrimaryButton label="Login" onPress={onLogin} loading={loading} testID="login-submit-button" />
 
-          <View style={s.demoNote}>
-            <Text style={s.demoTitle}>DEMO CREDENTIALS</Text>
-            <Text style={s.demoLine}>Username: {PRINCIPAL_CREDENTIALS.username}</Text>
-            <Text style={s.demoLine}>Password: {PRINCIPAL_CREDENTIALS.password}</Text>
-            <Text style={s.demoFill} onPress={fillDemo} testID="fill-demo-credentials">
-              Tap to auto-fill
+          <View style={s.demoNote} testID="demo-credentials">
+            <Text style={s.demoTitle}>Demo Principal:</Text>
+            <Text style={s.demoLine}>
+              {PRINCIPAL_CREDENTIALS.username} / {PRINCIPAL_CREDENTIALS.password}
             </Text>
+            <Text style={[s.demoTitle, { marginTop: spacing.sm }]}>Demo Teacher:</Text>
+            <Text style={s.demoLine}>Use any active teacher email / {TEACHER_DEMO_PASSWORD}</Text>
           </View>
-
-          <Text style={s.future}>
-            Teacher and Parent / Guardian logins coming in a future phase.
-          </Text>
         </View>
       </KeyboardAwareScrollView>
     </View>

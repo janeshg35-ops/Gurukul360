@@ -6,21 +6,22 @@ import React, {
   useState,
 } from "react";
 
-import { PRINCIPAL, PRINCIPAL_CREDENTIALS } from "@/src/constants/branding";
+import { authenticate, SessionUser } from "@/src/auth/session";
+import { Teacher } from "@/src/data/types";
 import { storage } from "@/src/utils/storage";
 
 const SESSION_KEY = "gurukul360.session.v1";
 
-export interface SessionUser {
-  name: string;
-  role: string;
-  email: string;
-}
+export type { SessionUser };
 
 interface AuthContextValue {
   user: SessionUser | null;
   ready: boolean;
-  signIn: (username: string, password: string) => { ok: boolean; error?: string };
+  signIn: (
+    username: string,
+    password: string,
+    teachers?: Teacher[],
+  ) => { ok: boolean; error?: string; role?: "Principal" | "Teacher" };
   signOut: () => void;
 }
 
@@ -50,26 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn = useCallback((username: string, password: string) => {
-    const u = username.trim().toLowerCase();
-    const p = password;
-    if (!u || !p) {
-      return { ok: false, error: "Please enter both username and password." };
-    }
-    if (
-      u === PRINCIPAL_CREDENTIALS.username.toLowerCase() &&
-      p === PRINCIPAL_CREDENTIALS.password
-    ) {
-      const session: SessionUser = {
-        name: PRINCIPAL.name,
-        role: PRINCIPAL.role,
-        email: PRINCIPAL.email,
-      };
-      setUser(session);
-      storage.secureSet(SESSION_KEY, JSON.stringify(session));
-      return { ok: true };
-    }
-    return { ok: false, error: "Invalid credentials. Please try again." };
+  const signIn = useCallback((username: string, password: string, teachers: Teacher[] = []) => {
+    const res = authenticate(username, password, teachers);
+    if (!res.ok) return { ok: false as const, error: res.error };
+    setUser(res.session);
+    storage.secureSet(SESSION_KEY, JSON.stringify(res.session));
+    return { ok: true as const, role: res.role };
   }, []);
 
   const signOut = useCallback(() => {

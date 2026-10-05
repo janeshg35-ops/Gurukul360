@@ -30,3 +30,6 @@ export const PRINCIPAL = {
   role: "Principal",
   email: PRINCIPAL_CREDENTIALS.username,
 } as const;
+
+// Shared demo password for every active teacher. Not stored on the Teacher record.
+export const TEACHER_DEMO_PASSWORD = "Teacher@123";
